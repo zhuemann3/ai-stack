@@ -1,1 +1,38 @@
+# Environment and secrets
 .env
+*.env
+
+# Data and local state
+data/
+*.db
+*.sqlite3
+*.log
+
+# Docker / Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.cache/
+*.egg-info/
+.venv/
+venv/
+.envrc
+
+# Mac / OS artifacts
+.DS_Store
+.AppleDouble
+.Trashes
+
+# Backup and build artifacts
+*.bak
+*.swp
+build/
+dist/
+
+# Local AI stack
+qdrant_data/
+postgres_data/
+webui_data/
+n8n_data/
+
