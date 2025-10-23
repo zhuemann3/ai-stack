@@ -23,11 +23,10 @@ services:
     image: qdrant/qdrant:latest
     container_name: qdrant
     restart: unless-stopped
-    user: "0:0"  # prevents macOS permission issues
+    user: "0:0"
     ports:
       - "6333:6333"
     environment:
-      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
       QDRANT__STORAGE__USE_WAL: "true"
       QDRANT__LOG_LEVEL: INFO
       QDRANT__SERVICE__GRPC_PORT: 6334
@@ -50,15 +49,12 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
-    depends_on:
-      qdrant:
-        condition: service_healthy
     environment:
       MODEL_NAME: sentence-transformers/all-MiniLM-L6-v2
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/embed"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD", "curl", "-f", "-X", "POST", "http://localhost:8000/embed", "-H", "Content-Type: application/json", "-d", "{\"texts\": [\"healthcheck\"]}"]
+      interval: 20s
+      timeout: 10s
       retries: 5
     networks:
       - ai_stack_net
@@ -85,11 +81,28 @@ services:
       DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - ./data/n8n_data:/home/node/.n8n
+      - /Users/brian/AI_Assistant/inbox:/data/inbox    # 👈 gives container access to your host folder
+      - /Users/brian/AI_Assistant/archive:/data/archive  # 👈 optional archive location
     depends_on:
       postgres:
         condition: service_healthy
       qdrant:
         condition: service_healthy
+    networks:
+      - ai_stack_net
+
+  ocr-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.ocr
+    container_name: ocr-api
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    volumes:
+      - /Users/brian/AI_Assistant/inbox:/app/inbox
+    environment:
+      TZ: America/Los_Angeles
     networks:
       - ai_stack_net
 
@@ -100,28 +113,32 @@ services:
     ports:
       - "${WEBUI_PORT:-3001}:8080"
     environment:
-      # === Core Retrieval / RAG Settings ===
-      VECTOR_DB: qdrant
-      QDRANT_URI: http://qdrant:6333
+      # === RAG & local vector search integration ===
+      ENABLE_RAG_HYBRID_SEARCH: "true"
+      VECTOR_DB: "qdrant"
+      QDRANT_URI: "http://qdrant:6333"
       QDRANT_API_KEY: ${QDRANT_API_KEY}
       QDRANT_ON_DISK: "true"
       QDRANT_PREFER_GRPC: "false"
-      ENABLE_RAG_HYBRID_SEARCH: "true"
-      RAG_EMBEDDING_MODEL: http://embed-api:8000/embed
 
-      # === Extraction / Model Integration ===
-      CONTENT_EXTRACTION_ENGINE: mineru
+      # === Embedding and content extraction endpoints ===
+      RAG_EMBEDDING_MODEL: "http://embed-api:8000/embed"
+      CONTENT_EXTRACTION_ENGINE: "http://ocr-api:8001/file"
+
+      # === Optional RAG tuning ===
+      RAG_TOP_K: "5"
+      RAG_MIN_SCORE: "0.2"
+
+      # === LLM / API settings (optional, safe to leave blank) ===
       OLLAMA_API_BASE_URL: ${OLLAMA_API_BASE_URL}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
-      OPENAI_API_BASE_URL: https://api.openai.com/v1
-      OPENAI_API_TYPE: openai
+      OPENAI_API_BASE_URL: "https://api.openai.com/v1"
+      OPENAI_API_TYPE: "openai"
       HF_TOKEN: ${HF_TOKEN}
 
-      # === Optional Logging / Behavior Tweaks ===
-      ENABLE_LOGGING: "true"
-      LOG_LEVEL: info
     volumes:
       - ./data/webui_data:/app/backend/data
+
     depends_on:
       postgres:
         condition: service_healthy
@@ -129,8 +146,12 @@ services:
         condition: service_healthy
       embed-api:
         condition: service_started
+      ocr-api:
+        condition: service_started
+
     networks:
       - ai_stack_net
+
     deploy:
       resources:
         limits:
