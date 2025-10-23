@@ -1,0 +1,22 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# --- System dependencies for OCR and PDF text extraction ---
+RUN apt-get update && apt-get install -y \
+    tesseract-ocr \
+    poppler-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# --- Install Python dependencies ---
+COPY requirements.txt .
+# ensure all libraries (including python-multipart) are available
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir fastapi uvicorn pytesseract pillow python-multipart
+
+# --- Copy app code ---
+COPY ocr_api.py .
+
+EXPOSE 8001
+CMD ["uvicorn", "ocr_api:app", "--host", "0.0.0.0", "--port", "8001"]
+

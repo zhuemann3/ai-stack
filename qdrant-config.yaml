@@ -1,0 +1,8 @@
+# qdrant-config.yaml
+service:
+  # The presence of this block enables authentication.
+  # If you omit the api_key here, the environment variable QDRANT__SERVICE__API_KEY
+  # will inject the key, but the service block must be present in the config file
+  # for the authentication logic to be initialized.
+  # To be explicit, you can also define the key here:
+  # api_key: strong_qdrant_api_key
