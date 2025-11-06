@@ -36,3 +36,9 @@ postgres_data/
 webui_data/
 n8n_data/
 
+
+# Ignore backup archives
+*.tar
+*.tar.gz
+*.tgz
+
