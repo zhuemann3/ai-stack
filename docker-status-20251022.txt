@@ -1,0 +1,3 @@
+NAME                STATUS              CONFIG FILES
+ai-stack            running(5)          /Users/brian/ai-stack/docker-compose.yml
+n8n                 running(1)          /Users/brian/docker/n8n/docker-compose.yml
