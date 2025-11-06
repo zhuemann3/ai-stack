@@ -42,3 +42,10 @@ n8n_data/
 *.tar.gz
 *.tgz
 
+/data/
+/models/
+/node_modules/
+/logs/
+/backups/
+/__pycache__/
+/venv/
